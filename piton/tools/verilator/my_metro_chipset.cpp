@@ -27,7 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Vmetro_chipset.h"
 #include "verilated.h"
 #include <iostream>
-//#define VERILATOR_VCD 1
+#define VERILATOR_VCD 0
 #ifdef VERILATOR_VCD
 #include "verilated_vcd_c.h"
 #endif
@@ -39,11 +39,13 @@ const int YUMMY_NOC_2 = 2;
 const int DATA_NOC_2  = 3;
 const int YUMMY_NOC_3 = 4;
 const int DATA_NOC_3  = 5;
+const int TEST_FINISH = 6;
 
 uint64_t main_time = 0; // Current simulation time
 uint64_t clk = 0;
 Vmetro_chipset* top;
 int rank, dest, size;
+short test_end=0;
 
 void initialize();
 
@@ -60,6 +62,10 @@ int getRank();
 int getSize();
 
 void finalize();
+
+unsigned short mpi_receive_finish();
+
+void mpi_send_finish(unsigned short message, int rank);
 
 #ifdef VERILATOR_VCD
 VerilatedVcdC* tfp;
@@ -91,6 +97,7 @@ void mpi_work_chipset() {
     if (top->offchip_processor_noc1_valid | top->offchip_processor_noc2_valid | top->offchip_processor_noc3_valid) {
         std::cout << "Cycle " << std::setw(10) <<  sc_time_stamp() << std::endl;
     }*/
+    test_end = test_end or (top->good_end==1 or top->bad_end==1);
     // send data
     mpi_send_data(top->offchip_processor_noc1_data, top->offchip_processor_noc1_valid, dest, rank, DATA_NOC_1);
     // send yummy
@@ -184,6 +191,9 @@ void reset_and_init() {
     top->processor_offchip_noc3_valid = 0;
     top->processor_offchip_noc3_data  = 0;
     top->offchip_processor_noc3_yummy = 0;
+    top->test_ena = 0;
+
+    test_end=0;
 
     init_jbus_model_call((char *) "mem.image", 0);
 
@@ -262,14 +272,29 @@ int main(int argc, char **argv, char **env) {
         dest = 0;
     }
 
+
     reset_and_init();
 
-    for (int i = 0; i < 350000; i++) {
-        mpi_tick();
-    }
-    /*while (!Verilated::gotFinish()) { 
+    top->test_ena = 1;
+
+    /*for (int i = 0; i < 350000; i++) {
         mpi_tick();
     }*/
+    bool test_exit = false;
+    int checkTestEnd=50000;
+    while (!Verilated::gotFinish() and !test_exit) { 
+        mpi_tick();
+        if (checkTestEnd==0) {
+            std::cout << "Checking Finish CHIPSET" << std::endl;
+            mpi_send_finish(test_end, rank);
+            checkTestEnd=10000;
+            test_exit=test_end;
+            std::cout << "Finishing: " << test_end << std::endl;
+        }
+        else {
+            checkTestEnd--;
+        }
+    }
 
     std::cout << std::setprecision(10) << sc_time_stamp() << std::endl;
 

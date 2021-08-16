@@ -118,7 +118,11 @@ output wire [`NOC_DATA_WIDTH-1:0]     offchip_processor_noc2_data,
 input  wire                           offchip_processor_noc2_yummy,
 output wire                           offchip_processor_noc3_valid,
 output wire [`NOC_DATA_WIDTH-1:0]     offchip_processor_noc3_data,
-input  wire                           offchip_processor_noc3_yummy
+input  wire                           offchip_processor_noc3_yummy,
+
+output wire                           good_end,
+output wire                           bad_end,
+input  wire                           test_ena
 `endif
 );
 
@@ -462,6 +466,14 @@ chipset chipset(
 
     .piton_prsnt_n(1'b0),
     .piton_ready_n(1'b0),
+
+    `ifdef VERILATOR
+    `ifdef METRO_CHIPSET
+    .good_end(good_end),
+    .bad_end(bad_end),
+    .test_ena(test_ena),
+    `endif
+    `endif
 
     // Synchronous with core_ref_clk (same as io_clk in this case) and no virtual channels
     .processor_offchip_noc1_valid   (processor_offchip_noc1_valid),

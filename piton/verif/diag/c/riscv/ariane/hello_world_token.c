@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "util.h"
+#define PITON_TEST_GOOD_END 0x8100000000ULL
 
 int main(int argc, char** argv) {
 
@@ -67,6 +68,11 @@ int main(int argc, char** argv) {
 
   // increment atomic counter
   ATOMIC_OP(amo_cnt[id+1][0], 1, add, w);
+
+  if (id == core_num-1) {
+    volatile unsigned long long trap;
+    trap = *((unsigned long long *) PITON_TEST_GOOD_END);
+  }
 
   return 0;
 }

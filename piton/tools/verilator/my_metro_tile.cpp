@@ -67,6 +67,10 @@ int getSize();
 
 void finalize();
 
+unsigned short mpi_receive_finish();
+
+void mpi_send_finish(unsigned short message, int rank);
+
 #ifdef VERILATOR_VCD
 VerilatedVcdC* tfp;
 #endif
@@ -478,20 +482,21 @@ int main(int argc, char **argv, char **env) {
 
     reset_and_init();
 
-    /*hile (!Verilated::gotFinish()) { 
+    bool test_exit = false;
+    int checkTestEnd=50000;
+    while (!Verilated::gotFinish() and !test_exit) { 
         mpi_tick();
-    }*/
-
-    for (int i = 0; i < 350000; i++) {
-        if (i %10000 == 0) {
-            std::cout << "######TIME######" << i << std::endl;
+        if (checkTestEnd==0) {
+            std::cout << "Checking Finish TILE" << std::endl;
+            test_exit= mpi_receive_finish();
+            checkTestEnd=10000;
+            std::cout << "Finishing: " << test_exit << std::endl;
         }
-        mpi_tick();
+        else {
+            checkTestEnd--;
+        }
     }
     std::cout << std::setprecision(10) << sc_time_stamp() << std::endl;
-    /*while (!Verilated::gotFinish()) { 
-        mpi_tick();
-    }*/
 
     #ifdef VERILATOR_VCD
     std::cout << "Trace done" << std::endl;

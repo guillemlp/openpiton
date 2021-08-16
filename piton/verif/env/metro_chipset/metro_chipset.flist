@@ -37,4 +37,5 @@
 ../manycore/iob_mon.v
 ../manycore/fake_pll.v
 ../manycore/fake_uart.v
+../../../design/chipset/rtl/test_end_checker.v
 metro_chipset.v

@@ -14,6 +14,7 @@
 //
 
 #include <stdio.h>
+#define PITON_TEST_GOOD_END 0x8100000000ULL
 
 int main(int argc, char ** argv) {
 
@@ -23,6 +24,9 @@ int main(int argc, char ** argv) {
   }
 
   printf("Done!\n");
+
+  volatile unsigned long long trap;
+  trap = *((unsigned long long *) PITON_TEST_GOOD_END);
 
   return 0;
 }
