@@ -97,8 +97,6 @@ void mpi_send_all_yummy(unsigned short yummy_0, unsigned short yummy_1, unsigned
 
 mpi_yummy_t mpi_receive_all_yummy(int origin, int flag);
 
-
-
 #ifdef VERILATOR_VCD
 VerilatedVcdC* tfp;
 #endif
@@ -197,6 +195,41 @@ void mpi_work_opt_chipset() {
     top->offchip_processor_noc3_yummy = mpi_receive_yummy(dest, YUMMY_NOC_3);
 }
 
+void mpi_work_opt_2_chipset() {
+    
+    test_end = test_end or (top->good_end==1 or top->bad_end==1);
+
+    // send yummy
+    mpi_send_all_yummy(top->processor_offchip_noc1_yummy, top->processor_offchip_noc2_yummy, top->processor_offchip_noc3_yummy, dest, rank, ALL_YUMMY);
+
+    // send data
+    mpi_send_data(top->offchip_processor_noc1_data, top->offchip_processor_noc1_valid, dest, rank, DATA_NOC_1);
+
+    // send data
+    mpi_send_data(top->offchip_processor_noc2_data, top->offchip_processor_noc2_valid, dest, rank, DATA_NOC_2);
+
+    // send data
+    mpi_send_data(top->offchip_processor_noc3_data, top->offchip_processor_noc3_valid, dest, rank, DATA_NOC_3);
+
+    // Receive yummy
+    mpi_yummy_t all_yummy = mpi_receive_all_yummy(dest, ALL_YUMMY);
+    top->offchip_processor_noc1_yummy = all_yummy.yummy_0;
+    top->offchip_processor_noc2_yummy = all_yummy.yummy_1;
+    top->offchip_processor_noc3_yummy = all_yummy.yummy_2;
+    
+    // receive data
+    unsigned short valid_aux;
+    top->processor_offchip_noc1_data = mpi_receive_data(dest, &valid_aux, DATA_NOC_1);
+    top->processor_offchip_noc1_valid = valid_aux;
+
+
+    top->processor_offchip_noc2_data = mpi_receive_data(dest, &valid_aux, DATA_NOC_2);
+    top->processor_offchip_noc2_valid = valid_aux;
+
+    top->processor_offchip_noc3_data = mpi_receive_data(dest, &valid_aux, DATA_NOC_3);
+    top->processor_offchip_noc3_valid = valid_aux;
+}
+
 
 void mpi_tick() {
     top->core_ref_clk = !top->core_ref_clk;
@@ -221,6 +254,24 @@ void mpi_tick_opt() {
     main_time += 250;
     top->eval();
     mpi_work_opt_chipset();
+    // Do MPI
+    top->eval();
+#ifdef VERILATOR_VCD
+    tfp->dump(main_time);
+#endif
+    top->core_ref_clk = !top->core_ref_clk;
+    main_time += 250;
+    top->eval();
+#ifdef VERILATOR_VCD
+    tfp->dump(main_time);
+#endif
+}
+
+void mpi_tick_opt_2() {
+    top->core_ref_clk = !top->core_ref_clk;
+    main_time += 250;
+    top->eval();
+    mpi_work_opt_2_chipset();
     // Do MPI
     top->eval();
 #ifdef VERILATOR_VCD
@@ -367,7 +418,7 @@ int main(int argc, char **argv, char **env) {
     bool test_exit = false;
     int checkTestEnd=50000;
     while (!Verilated::gotFinish() and !test_exit) { 
-        mpi_tick_opt();
+        mpi_tick_opt_2();
         if (checkTestEnd==0) {
             //std::cout << "Checking Finish CHIPSET" << std::endl;
             mpi_send_finish(test_end, rank);
