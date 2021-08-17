@@ -15,10 +15,16 @@ MPI_Aint     offsets[2];
 
 const int nitems_noc=6;
 int          blocklengths_noc[6] = {1,1,1,1,1,1};
-MPI_Datatype types_noc[6] = {MPI_UNSIGNED_SHORT, MPI_UNSIGNED_SHORT, MPI_UNSIGNED_SHORT,
-                         MPI_UNSIGNED_LONG_LONG, MPI_UNSIGNED_LONG_LONG, MPI_UNSIGNED_LONG_LONG};
+MPI_Datatype types_noc[6] = {MPI_UNSIGNED_LONG_LONG, MPI_UNSIGNED_LONG_LONG, MPI_UNSIGNED_LONG_LONG,
+                         MPI_UNSIGNED_SHORT, MPI_UNSIGNED_SHORT, MPI_UNSIGNED_SHORT};
 MPI_Datatype mpi_noc_type;
 MPI_Aint     offsets_noc[6];
+
+const int nitems_yummy=3;
+int          blocklengths_yummy[3] = {1,1,1};
+MPI_Datatype types_yummy[3] = {MPI_UNSIGNED_SHORT, MPI_UNSIGNED_SHORT, MPI_UNSIGNED_SHORT};
+MPI_Datatype mpi_yummy_type;
+MPI_Aint     offsets_yummy[3];
 
 
 
@@ -26,6 +32,12 @@ typedef struct {
     unsigned short valid;
     unsigned long long data;
 } mpi_data_t;
+
+typedef struct {
+    unsigned short yummy_0;
+    unsigned short yummy_1;
+    unsigned short yummy_2;
+} mpi_yummy_t;
 
 typedef struct {
     unsigned long long data_0;
@@ -47,6 +59,25 @@ void initialize(){
     MPI_Type_create_struct(nitems, blocklengths, offsets, types, &mpi_data_type);
     MPI_Type_commit(&mpi_data_type);
 
+    // Initialize the struct data&valid
+    offsets_noc[0] = offsetof(mpi_noc_t, data_0);
+    offsets_noc[1] = offsetof(mpi_noc_t, data_1);
+    offsets_noc[2] = offsetof(mpi_noc_t, data_2);
+    offsets_noc[3] = offsetof(mpi_noc_t, valid_0);
+    offsets_noc[4] = offsetof(mpi_noc_t, valid_1);
+    offsets_noc[5] = offsetof(mpi_noc_t, valid_2);
+
+    MPI_Type_create_struct(nitems_noc, blocklengths_noc, offsets_noc, types_noc, &mpi_noc_type);
+    MPI_Type_commit(&mpi_noc_type);
+
+    // Initialize the struct data&valid
+    offsets_yummy[0] = offsetof(mpi_yummy_t, yummy_0);
+    offsets_yummy[1] = offsetof(mpi_yummy_t, yummy_1);
+    offsets_yummy[2] = offsetof(mpi_yummy_t, yummy_2);
+
+    MPI_Type_create_struct(nitems_yummy, blocklengths_yummy, offsets_yummy, types_yummy, &mpi_yummy_type);
+    MPI_Type_commit(&mpi_yummy_type);
+
 }
 
 // MPI finish functions
@@ -63,9 +94,9 @@ unsigned short mpi_receive_finish(){
 
 void mpi_send_finish(unsigned short message, int rank){
     int message_len = 1;
-    if (message) {
+    /*if (message) {
         cout << "[DPI CPP] Sending finish " << std::hex << (int)message << " to All" << endl << std::flush;
-    }
+    }*/
     MPI_Bcast(&message, message_len, MPI_UNSIGNED_SHORT, rank, MPI_COMM_WORLD);
 }
 
@@ -94,12 +125,10 @@ void mpi_send_yummy(unsigned short message, int dest, int rank, int flag){
 void mpi_send_data(unsigned long long data, unsigned char valid, int dest, int rank, int flag){
     int message_len = 1;
     mpi_data_t message;
-    //cout << "valid: " << std::hex << valid << std::endl;
+
     message.valid = valid;
     message.data  = data;
-    /*if (valid) {
-        cout << flag << " [DPI CPP] Sending DATA valid: " << flag << " " << std::hex << (int)message.valid << " data: " << std::hex << message.data << " to " << dest << endl;
-    }*/
+    
     MPI_Send(&message, message_len, mpi_data_type, dest, flag, MPI_COMM_WORLD);
 }
 
@@ -107,43 +136,60 @@ unsigned long long mpi_receive_data(int origin, unsigned short* valid, int flag)
     int message_len = 1;
     MPI_Status status;
     mpi_data_t message;
-    //cout << flag << " [DPI CPP] Blocking Receive data rank: " << origin << endl << std::flush;
+
     MPI_Recv(&message, message_len, mpi_data_type, origin, flag, MPI_COMM_WORLD, &status);
-    /*if (message.valid) {
-        cout << flag << " [DPI CPP] Data Message received: " << (short) message.valid << " " << std::hex << message.data << endl << std::flush;
-    }*/
+    
     *valid = message.valid;
     return message.data;
 }
 
 // MPI Send 3 NoC messages
-void mpi_send_noc(unsigned long long data_0, unsigned char valid_0, unsigned long long data_1, unsigned char valid_1, unsigned long long data_2, unsigned char valid_2, int dest, int rank, int flag){
+void mpi_send_all_noc(unsigned long long data_0, unsigned char valid_0, unsigned long long data_1, unsigned char valid_1, unsigned long long data_2, unsigned char valid_2, int dest, int rank, int flag){
     int message_len = 1;
     mpi_noc_t message;
-    //cout << "valid: " << std::hex << valid << std::endl;
+
     message.valid_0 = valid_0;
     message.data_0  = data_0;
     message.valid_1 = valid_1;
     message.data_1  = data_1;
     message.valid_2 = valid_2;
     message.data_2  = data_2;
-    /*if (valid) {
-        cout << flag << " [DPI CPP] Sending DATA valid: " << flag << " " << std::hex << (int)message.valid << " data: " << std::hex << message.data << " to " << dest << endl;
-    }*/
+
     MPI_Send(&message, message_len, mpi_noc_type, dest, flag, MPI_COMM_WORLD);
+
 }
 
-unsigned long long mpi_receive_noc(int origin, unsigned short* valid, int flag){
+mpi_noc_t mpi_receive_all_noc(int origin, int flag){
     int message_len = 1;
     MPI_Status status;
     mpi_noc_t message;
-    //cout << flag << " [DPI CPP] Blocking Receive data rank: " << origin << endl << std::flush;
+
     MPI_Recv(&message, message_len, mpi_noc_type, origin, flag, MPI_COMM_WORLD, &status);
-    /*if (message.valid) {
-        cout << flag << " [DPI CPP] Data Message received: " << (short) message.valid << " " << std::hex << message.data << endl << std::flush;
-    }*/
-    *valid = message.valid_0;
-    return message.data_0;
+        
+    return message;
+}
+
+// MPI Send 3 NoC messages
+void mpi_send_all_yummy(unsigned short yummy_0, unsigned short yummy_1, unsigned short yummy_2, int dest, int rank, int flag){
+    int message_len = 1;
+    mpi_yummy_t message;
+
+    message.yummy_0 = yummy_0;
+    message.yummy_1 = yummy_1;
+    message.yummy_2 = yummy_2;
+
+    MPI_Send(&message, message_len, mpi_yummy_type, dest, flag, MPI_COMM_WORLD);
+
+}
+
+mpi_yummy_t mpi_receive_all_yummy(int origin, int flag){
+    int message_len = 1;
+    MPI_Status status;
+    mpi_yummy_t message;
+
+    MPI_Recv(&message, message_len, mpi_yummy_type, origin, flag, MPI_COMM_WORLD, &status);
+        
+    return message;
 }
 
 int getRank(){
