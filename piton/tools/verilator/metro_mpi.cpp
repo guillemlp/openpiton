@@ -1,6 +1,8 @@
 #include <iostream>
 #include <mpi.h>
 
+#define MPI_OPT_3 1
+
 using namespace std;
 
 unsigned long long message_async;
@@ -26,6 +28,13 @@ MPI_Datatype types_yummy[3] = {MPI_UNSIGNED_SHORT, MPI_UNSIGNED_SHORT, MPI_UNSIG
 MPI_Datatype mpi_yummy_type;
 MPI_Aint     offsets_yummy[3];
 
+const int nitems_all=9;
+int          blocklengths_all[9] = {1,1,1,1,1,1,1,1,1};
+MPI_Datatype types_all[9] = {MPI_UNSIGNED_LONG_LONG, MPI_UNSIGNED_LONG_LONG, MPI_UNSIGNED_LONG_LONG,
+                         MPI_UNSIGNED_SHORT, MPI_UNSIGNED_SHORT, MPI_UNSIGNED_SHORT,
+                         MPI_UNSIGNED_SHORT, MPI_UNSIGNED_SHORT, MPI_UNSIGNED_SHORT};
+MPI_Datatype mpi_all_type;
+MPI_Aint     offsets_all[9];
 
 
 typedef struct {
@@ -48,17 +57,32 @@ typedef struct {
     unsigned short valid_2;
 } mpi_noc_t;
 
+typedef struct {
+    unsigned long long data_0;
+    unsigned long long data_1;
+    unsigned long long data_2;
+    unsigned short valid_0;
+    unsigned short valid_1;
+    unsigned short valid_2;
+    unsigned short yummy_0;
+    unsigned short yummy_1;
+    unsigned short yummy_2;
+} mpi_all_t;
+
 void initialize(){
     MPI_Init(NULL, NULL);
     cout << "initializing" << endl;
     
+#if defined(MPI_OPT_0)
     // Initialize the struct data&valid
     offsets[0] = offsetof(mpi_data_t, valid);
     offsets[1] = offsetof(mpi_data_t, data);
 
     MPI_Type_create_struct(nitems, blocklengths, offsets, types, &mpi_data_type);
     MPI_Type_commit(&mpi_data_type);
+#endif
 
+#if defined(MPI_OPT_1) || defined(MPI_OPT_3) 
     // Initialize the struct data&valid
     offsets_noc[0] = offsetof(mpi_noc_t, data_0);
     offsets_noc[1] = offsetof(mpi_noc_t, data_1);
@@ -69,7 +93,8 @@ void initialize(){
 
     MPI_Type_create_struct(nitems_noc, blocklengths_noc, offsets_noc, types_noc, &mpi_noc_type);
     MPI_Type_commit(&mpi_noc_type);
-
+#endif
+#if defined(MPI_OPT_2) || defined(MPI_OPT_3)
     // Initialize the struct data&valid
     offsets_yummy[0] = offsetof(mpi_yummy_t, yummy_0);
     offsets_yummy[1] = offsetof(mpi_yummy_t, yummy_1);
@@ -77,7 +102,22 @@ void initialize(){
 
     MPI_Type_create_struct(nitems_yummy, blocklengths_yummy, offsets_yummy, types_yummy, &mpi_yummy_type);
     MPI_Type_commit(&mpi_yummy_type);
+#endif
+#ifdef MPI_OPT_4
+    // Initialize the struct data&valid
+    offsets_noc[0] = offsetof(mpi_all_t, data_0);
+    offsets_noc[1] = offsetof(mpi_all_t, data_1);
+    offsets_noc[2] = offsetof(mpi_all_t, data_2);
+    offsets_noc[3] = offsetof(mpi_all_t, valid_0);
+    offsets_noc[4] = offsetof(mpi_all_t, valid_1);
+    offsets_noc[5] = offsetof(mpi_all_t, valid_2);
+    offsets_noc[6] = offsetof(mpi_all_t, yummy_0);
+    offsets_noc[7] = offsetof(mpi_all_t, yummy_1);
+    offsets_noc[8] = offsetof(mpi_all_t, yummy_2);
 
+    MPI_Type_create_struct(nitems_all, blocklengths_all, offsets_all, types_all, &mpi_all_type);
+    MPI_Type_commit(&mpi_all_type);
+#endif
 }
 
 // MPI finish functions
@@ -190,6 +230,23 @@ mpi_yummy_t mpi_receive_all_yummy(int origin, int flag){
     MPI_Recv(&message, message_len, mpi_yummy_type, origin, flag, MPI_COMM_WORLD, &status);
         
     return message;
+}
+
+// MPI Send 3 NoC messages
+void mpi_send_all(mpi_all_t message, int dest, int rank, int flag){
+    int message_len = 1;
+
+    MPI_Send(&message, message_len, mpi_all_type, dest, flag, MPI_COMM_WORLD);
+}
+
+void mpi_receive_all(mpi_all_t* message, int origin, int flag){
+    int message_len = 1;
+    MPI_Status status;
+    //mpi_noc_t message;
+
+    MPI_Recv(&message, message_len, mpi_all_type, origin, flag, MPI_COMM_WORLD, &status);
+        
+    //return message;
 }
 
 int getRank(){

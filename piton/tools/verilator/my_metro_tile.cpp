@@ -27,7 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Vmetro_tile.h"
 #include "verilated.h"
 #include <iostream>
-#define VERILATOR_VCD 0
+//#define VERILATOR_VCD 0
 #ifdef VERILATOR_VCD
 #include "verilated_vcd_c.h"
 #endif
@@ -42,6 +42,7 @@ const int DATA_NOC_3   = 5;
 const int TEST_FINISH  = 6;
 const int DATA_ALL_NOC = 7;
 const int ALL_YUMMY    = 8;
+const int ALL_NOC      = 9;
 
 // Compilation flags parameters
 const int PITON_X_TILES = X_TILES;
@@ -99,6 +100,23 @@ typedef struct {
 void mpi_send_all_yummy(unsigned short yummy_0, unsigned short yummy_1, unsigned short yummy_2, int dest, int rank, int flag);
 
 mpi_yummy_t mpi_receive_all_yummy(int origin, int flag);
+
+typedef struct {
+    unsigned long long data_0;
+    unsigned long long data_1;
+    unsigned long long data_2;
+    unsigned short valid_0;
+    unsigned short valid_1;
+    unsigned short valid_2;
+    unsigned short yummy_0;
+    unsigned short yummy_1;
+    unsigned short yummy_2;
+} mpi_all_t;
+
+// MPI Send 3 NoC messages
+void mpi_send_all(mpi_all_t message, int dest, int rank, int flag);
+
+void mpi_receive_all(mpi_all_t* message, int origin, int flag);
 
 #ifdef VERILATOR_VCD
 VerilatedVcdC* tfp;
@@ -428,6 +446,234 @@ void mpi_work_opt_2_W() {
     top->in_W_noc3_valid = valid_aux;
 }
 
+void mpi_work_opt_3_N() {
+
+    // send data
+    mpi_send_all_noc(top->out_N_noc1_data, top->out_N_noc1_valid,
+                     top->out_N_noc2_data, top->out_N_noc2_valid,
+                     top->out_N_noc3_data, top->out_N_noc3_valid,
+                     rankN, rank, DATA_ALL_NOC);
+    // send yummy
+    mpi_send_all_yummy(top->out_N_noc1_yummy, top->out_N_noc2_yummy, top->out_N_noc3_yummy, rankN, rank, ALL_YUMMY);
+    
+    // receive data
+    mpi_noc_t all_response = mpi_receive_all_noc(rankN, DATA_ALL_NOC);
+    top->in_N_noc1_data  = all_response.data_0; 
+    top->in_N_noc1_valid = all_response.valid_0;
+    top->in_N_noc2_data  = all_response.data_1; 
+    top->in_N_noc2_valid = all_response.valid_1;
+    top->in_N_noc3_data  = all_response.data_2; 
+    top->in_N_noc3_valid = all_response.valid_2;
+
+    // receive yummy
+    mpi_yummy_t all_yummy = mpi_receive_all_yummy(rankN, ALL_YUMMY);
+    top->in_N_noc1_yummy = all_yummy.yummy_0;
+    top->in_N_noc2_yummy = all_yummy.yummy_1;
+    top->in_N_noc3_yummy = all_yummy.yummy_2;
+}
+
+void mpi_work_opt_3_S() {
+
+    // send data
+    mpi_send_all_noc(top->out_S_noc1_data, top->out_S_noc1_valid,
+                     top->out_S_noc2_data, top->out_S_noc2_valid,
+                     top->out_S_noc3_data, top->out_S_noc3_valid,
+                     rankS, rank, DATA_ALL_NOC);
+    // send yummy
+    mpi_send_all_yummy(top->out_S_noc1_yummy, top->out_S_noc2_yummy, top->out_S_noc3_yummy, rankS, rank, ALL_YUMMY);
+    
+    // receive data
+    mpi_noc_t all_response = mpi_receive_all_noc(rankS, DATA_ALL_NOC);
+    top->in_S_noc1_data  = all_response.data_0; 
+    top->in_S_noc1_valid = all_response.valid_0;
+    top->in_S_noc2_data  = all_response.data_1; 
+    top->in_S_noc2_valid = all_response.valid_1;
+    top->in_S_noc3_data  = all_response.data_2; 
+    top->in_S_noc3_valid = all_response.valid_2;
+
+    // receive yummy
+    mpi_yummy_t all_yummy = mpi_receive_all_yummy(rankS, ALL_YUMMY);
+    top->in_S_noc1_yummy = all_yummy.yummy_0;
+    top->in_S_noc2_yummy = all_yummy.yummy_1;
+    top->in_S_noc3_yummy = all_yummy.yummy_2;
+}
+
+void mpi_work_opt_3_E() {
+
+    // send data
+    mpi_send_all_noc(top->out_E_noc1_data, top->out_E_noc1_valid,
+                     top->out_E_noc2_data, top->out_E_noc2_valid,
+                     top->out_E_noc3_data, top->out_E_noc3_valid,
+                     rankE, rank, DATA_ALL_NOC);
+    // send yummy
+    mpi_send_all_yummy(top->out_E_noc1_yummy, top->out_E_noc2_yummy, top->out_E_noc3_yummy, rankE, rank, ALL_YUMMY);
+    
+    // receive data
+    mpi_noc_t all_response = mpi_receive_all_noc(rankE, DATA_ALL_NOC);
+    top->in_E_noc1_data  = all_response.data_0; 
+    top->in_E_noc1_valid = all_response.valid_0;
+    top->in_E_noc2_data  = all_response.data_1; 
+    top->in_E_noc2_valid = all_response.valid_1;
+    top->in_E_noc3_data  = all_response.data_2; 
+    top->in_E_noc3_valid = all_response.valid_2;
+
+    // receive yummy
+    mpi_yummy_t all_yummy = mpi_receive_all_yummy(rankE, ALL_YUMMY);
+    top->in_E_noc1_yummy = all_yummy.yummy_0;
+    top->in_E_noc2_yummy = all_yummy.yummy_1;
+    top->in_E_noc3_yummy = all_yummy.yummy_2;
+}
+
+void mpi_work_opt_3_W() {
+
+    // send data
+    mpi_send_all_noc(top->out_W_noc1_data, top->out_W_noc1_valid,
+                     top->out_W_noc2_data, top->out_W_noc2_valid,
+                     top->out_W_noc3_data, top->out_W_noc3_valid,
+                     rankW, rank, DATA_ALL_NOC);
+    // send yummy
+    mpi_send_all_yummy(top->out_W_noc1_yummy, top->out_W_noc2_yummy, top->out_W_noc3_yummy, rankW, rank, ALL_YUMMY);
+    
+    // receive data
+    mpi_noc_t all_response = mpi_receive_all_noc(rankW, DATA_ALL_NOC);
+    top->in_W_noc1_data  = all_response.data_0; 
+    top->in_W_noc1_valid = all_response.valid_0;
+    top->in_W_noc2_data  = all_response.data_1; 
+    top->in_W_noc2_valid = all_response.valid_1;
+    top->in_W_noc3_data  = all_response.data_2; 
+    top->in_W_noc3_valid = all_response.valid_2;
+
+    // receive yummy
+    mpi_yummy_t all_yummy = mpi_receive_all_yummy(rankW, ALL_YUMMY);
+    top->in_W_noc1_yummy = all_yummy.yummy_0;
+    top->in_W_noc2_yummy = all_yummy.yummy_1;
+    top->in_W_noc3_yummy = all_yummy.yummy_2;
+}
+void mpi_work_opt_4_N() {
+
+    mpi_all_t message;
+    message.data_0  = top->out_N_noc1_data;
+    message.valid_0 = top->out_N_noc1_valid;
+    message.data_1  = top->out_N_noc2_data;
+    message.valid_1 = top->out_N_noc2_valid;
+    message.data_2  = top->out_N_noc3_data;
+    message.valid_2 = top->out_N_noc3_valid,
+    message.yummy_0 = top->out_N_noc1_yummy;
+    message.yummy_1 = top->out_N_noc2_yummy;
+    message.yummy_2 = top->out_N_noc3_yummy;
+
+    // send data
+    mpi_send_all(message, rankN, rank, ALL_NOC);
+        
+    // receive data
+    mpi_all_t all_response;
+    mpi_receive_all(&all_response, rankN, ALL_NOC);
+
+    top->in_N_noc1_data  = all_response.data_0; 
+    top->in_N_noc1_valid = all_response.valid_0;
+    top->in_N_noc2_data  = all_response.data_1; 
+    top->in_N_noc2_valid = all_response.valid_1;
+    top->in_N_noc3_data  = all_response.data_2; 
+    top->in_N_noc3_valid = all_response.valid_2;
+    top->in_N_noc1_yummy = all_response.yummy_0;
+    top->in_N_noc2_yummy = all_response.yummy_1;
+    top->in_N_noc3_yummy = all_response.yummy_2;
+    
+}
+
+void mpi_work_opt_4_S() {
+
+    mpi_all_t message;
+    message.data_0  = top->out_S_noc1_data;
+    message.valid_0 = top->out_S_noc1_valid;
+    message.data_1  = top->out_S_noc2_data;
+    message.valid_1 = top->out_S_noc2_valid;
+    message.data_2  = top->out_S_noc3_data;
+    message.valid_2 = top->out_S_noc3_valid,
+    message.yummy_0 = top->out_S_noc1_yummy;
+    message.yummy_1 = top->out_S_noc2_yummy;
+    message.yummy_2 = top->out_S_noc3_yummy;
+
+    // send data
+    mpi_send_all(message, rankS, rank, ALL_NOC);
+        
+    // receive data
+    mpi_all_t all_response;
+    mpi_receive_all(&all_response, rankS, ALL_NOC);
+    
+    top->in_S_noc1_data  = all_response.data_0; 
+    top->in_S_noc1_valid = all_response.valid_0;
+    top->in_S_noc2_data  = all_response.data_1; 
+    top->in_S_noc2_valid = all_response.valid_1;
+    top->in_S_noc3_data  = all_response.data_2; 
+    top->in_S_noc3_valid = all_response.valid_2;
+    top->in_S_noc1_yummy = all_response.yummy_0;
+    top->in_S_noc2_yummy = all_response.yummy_1;
+    top->in_S_noc3_yummy = all_response.yummy_2;
+}
+
+void mpi_work_opt_4_E() {
+
+    mpi_all_t message;
+    message.data_0  = top->out_E_noc1_data;
+    message.valid_0 = top->out_E_noc1_valid;
+    message.data_1  = top->out_E_noc2_data;
+    message.valid_1 = top->out_E_noc2_valid;
+    message.data_2  = top->out_E_noc3_data;
+    message.valid_2 = top->out_E_noc3_valid,
+    message.yummy_0 = top->out_E_noc1_yummy;
+    message.yummy_1 = top->out_E_noc2_yummy;
+    message.yummy_2 = top->out_E_noc3_yummy;
+
+    // send data
+    mpi_send_all(message, rankE, rank, ALL_NOC);
+        
+    // receive data
+    mpi_all_t all_response;
+    mpi_receive_all(&all_response, rankE, ALL_NOC);
+    
+    top->in_E_noc1_data  = all_response.data_0; 
+    top->in_E_noc1_valid = all_response.valid_0;
+    top->in_E_noc2_data  = all_response.data_1; 
+    top->in_E_noc2_valid = all_response.valid_1;
+    top->in_E_noc3_data  = all_response.data_2; 
+    top->in_E_noc3_valid = all_response.valid_2;
+    top->in_E_noc1_yummy = all_response.yummy_0;
+    top->in_E_noc2_yummy = all_response.yummy_1;
+    top->in_E_noc3_yummy = all_response.yummy_2;
+}
+
+void mpi_work_opt_4_W() {
+
+    mpi_all_t message;
+    message.data_0  = top->out_W_noc1_data;
+    message.valid_0 = top->out_W_noc1_valid;
+    message.data_1  = top->out_W_noc2_data;
+    message.valid_1 = top->out_W_noc2_valid;
+    message.data_2  = top->out_W_noc3_data;
+    message.valid_2 = top->out_W_noc3_valid,
+    message.yummy_0 = top->out_W_noc1_yummy;
+    message.yummy_1 = top->out_W_noc2_yummy;
+    message.yummy_2 = top->out_W_noc3_yummy;
+
+    // send data
+    mpi_send_all(message, rankW, rank, ALL_NOC);
+        
+    // receive data
+    mpi_all_t all_response;
+    mpi_receive_all(&all_response, rankW, ALL_NOC);
+    
+    top->in_W_noc1_data  = all_response.data_0; 
+    top->in_W_noc1_valid = all_response.valid_0;
+    top->in_W_noc2_data  = all_response.data_1; 
+    top->in_W_noc2_valid = all_response.valid_1;
+    top->in_W_noc3_data  = all_response.data_2; 
+    top->in_W_noc3_valid = all_response.valid_2;
+    top->in_W_noc1_yummy = all_response.yummy_0;
+    top->in_W_noc2_yummy = all_response.yummy_1;
+    top->in_W_noc3_yummy = all_response.yummy_2;
+}
+
 void mpi_work_N() {
 
     // send data
@@ -628,6 +874,52 @@ void mpi_tick_opt_2() {
     if (rankS != -1) mpi_work_opt_2_S();
     if (rankE != -1) mpi_work_opt_2_E();
     if (rankW != -1) mpi_work_opt_2_W();
+    
+    top->eval();
+    #ifdef VERILATOR_VCD
+        tfp->dump(main_time);
+    #endif
+
+    top->core_ref_clk = !top->core_ref_clk;
+    main_time += 250;
+    top->eval();
+    #ifdef VERILATOR_VCD
+        tfp->dump(main_time);
+    #endif
+}
+void mpi_tick_opt_3() {
+    top->core_ref_clk = !top->core_ref_clk;
+    main_time += 250;
+    top->eval();
+    
+    // Do MPI
+    if (rankN != -1) mpi_work_opt_3_N();
+    if (rankS != -1) mpi_work_opt_3_S();
+    if (rankE != -1) mpi_work_opt_3_E();
+    if (rankW != -1) mpi_work_opt_3_W();
+    
+    top->eval();
+    #ifdef VERILATOR_VCD
+        tfp->dump(main_time);
+    #endif
+
+    top->core_ref_clk = !top->core_ref_clk;
+    main_time += 250;
+    top->eval();
+    #ifdef VERILATOR_VCD
+        tfp->dump(main_time);
+    #endif
+}
+void mpi_tick_opt_4() {
+    top->core_ref_clk = !top->core_ref_clk;
+    main_time += 250;
+    top->eval();
+    
+    // Do MPI
+    if (rankN != -1) mpi_work_opt_4_N();
+    if (rankS != -1) mpi_work_opt_4_S();
+    if (rankE != -1) mpi_work_opt_4_E();
+    if (rankW != -1) mpi_work_opt_4_W();
     
     top->eval();
     #ifdef VERILATOR_VCD
@@ -846,7 +1138,7 @@ int main(int argc, char **argv, char **env) {
     bool test_exit = false;
     int checkTestEnd=50000;
     while (!Verilated::gotFinish() and !test_exit) { 
-        mpi_tick_opt_2();
+        mpi_tick_opt_3();
         if (checkTestEnd==0) {
             //std::cout << "Checking Finish TILE" << std::endl;
             test_exit= mpi_receive_finish();

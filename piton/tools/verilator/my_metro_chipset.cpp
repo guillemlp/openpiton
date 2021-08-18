@@ -27,7 +27,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Vmetro_chipset.h"
 #include "verilated.h"
 #include <iostream>
-#define VERILATOR_VCD 0
+//#define VERILATOR_VCD 0
+#define MPI_OPT_3 1
 #ifdef VERILATOR_VCD
 #include "verilated_vcd_c.h"
 #endif
@@ -42,6 +43,7 @@ const int DATA_NOC_3   = 5;
 const int TEST_FINISH  = 6;
 const int DATA_ALL_NOC = 7;
 const int ALL_YUMMY    = 8;
+const int ALL_NOC      = 9;
 
 
 uint64_t main_time = 0; // Current simulation time
@@ -96,6 +98,24 @@ typedef struct {
 void mpi_send_all_yummy(unsigned short yummy_0, unsigned short yummy_1, unsigned short yummy_2, int dest, int rank, int flag);
 
 mpi_yummy_t mpi_receive_all_yummy(int origin, int flag);
+
+typedef struct {
+    unsigned long long data_0;
+    unsigned long long data_1;
+    unsigned long long data_2;
+    unsigned short valid_0;
+    unsigned short valid_1;
+    unsigned short valid_2;
+    unsigned short yummy_0;
+    unsigned short yummy_1;
+    unsigned short yummy_2;
+} mpi_all_t;
+
+// MPI Send 3 NoC messages
+void mpi_send_all(mpi_all_t message, int dest, int rank, int flag);
+
+void mpi_receive_all(mpi_all_t* message, int origin, int flag);
+
 
 #ifdef VERILATOR_VCD
 VerilatedVcdC* tfp;
@@ -161,7 +181,7 @@ void mpi_work_chipset() {
     top->offchip_processor_noc3_yummy = mpi_receive_yummy(dest, YUMMY_NOC_3);
 }
 
-void mpi_work_opt_chipset() {
+void mpi_work_opt_1_chipset() {
     /*std::cout.precision(10); 
     if (top->offchip_processor_noc1_valid | top->offchip_processor_noc2_valid | top->offchip_processor_noc3_valid) {
         std::cout << "Cycle " << std::setw(10) <<  sc_time_stamp() << std::endl;
@@ -230,12 +250,89 @@ void mpi_work_opt_2_chipset() {
     top->processor_offchip_noc3_valid = valid_aux;
 }
 
+void mpi_work_opt_3_chipset() {
+    
+    test_end = test_end or (top->good_end==1 or top->bad_end==1);
+
+    // send yummy
+    mpi_send_all_yummy(top->processor_offchip_noc1_yummy, top->processor_offchip_noc2_yummy, top->processor_offchip_noc3_yummy, dest, rank, ALL_YUMMY);
+
+    // send data
+    mpi_send_all_noc(top->offchip_processor_noc1_data, top->offchip_processor_noc1_valid,
+                     top->offchip_processor_noc2_data, top->offchip_processor_noc2_valid,
+                     top->offchip_processor_noc3_data, top->offchip_processor_noc3_valid,
+                     dest, rank, DATA_ALL_NOC);
+
+    // Receive yummy
+    mpi_yummy_t all_yummy = mpi_receive_all_yummy(dest, ALL_YUMMY);
+    top->offchip_processor_noc1_yummy = all_yummy.yummy_0;
+    top->offchip_processor_noc2_yummy = all_yummy.yummy_1;
+    top->offchip_processor_noc3_yummy = all_yummy.yummy_2;
+
+    // receive data
+    mpi_noc_t all_response = mpi_receive_all_noc(dest, DATA_ALL_NOC);
+    top->processor_offchip_noc1_data  = all_response.data_0; 
+    top->processor_offchip_noc1_valid = all_response.valid_0;
+    top->processor_offchip_noc2_data  = all_response.data_1; 
+    top->processor_offchip_noc2_valid = all_response.valid_1;
+    top->processor_offchip_noc3_data  = all_response.data_2; 
+    top->processor_offchip_noc3_valid = all_response.valid_2;
+}
+
+void mpi_work_opt_4_chipset() {
+    
+    test_end = test_end or (top->good_end==1 or top->bad_end==1);
+
+    mpi_all_t message;
+    message.data_0  = top->offchip_processor_noc1_data;
+    message.valid_0 = top->offchip_processor_noc1_valid;
+    message.data_1  = top->offchip_processor_noc2_data;
+    message.valid_1 = top->offchip_processor_noc2_valid;
+    message.data_2  = top->offchip_processor_noc3_data;
+    message.valid_2 = top->offchip_processor_noc3_valid;
+    message.yummy_0 = top->processor_offchip_noc1_yummy;
+    message.yummy_1 = top->processor_offchip_noc2_yummy;
+    message.yummy_2 = top->processor_offchip_noc3_yummy;
+
+    // send data
+    mpi_send_all(message, dest, rank, ALL_NOC);
+        
+    // receive data
+    mpi_all_t all_response;
+    mpi_receive_all(&all_response, dest, ALL_NOC);
+    
+    top->processor_offchip_noc1_data  = all_response.data_0; 
+    top->processor_offchip_noc1_valid = all_response.valid_0;
+    top->processor_offchip_noc2_data  = all_response.data_1; 
+    top->processor_offchip_noc2_valid = all_response.valid_1;
+    top->processor_offchip_noc3_data  = all_response.data_2; 
+    top->processor_offchip_noc3_valid = all_response.valid_2;
+    top->offchip_processor_noc1_yummy = all_response.yummy_0;
+    top->offchip_processor_noc2_yummy = all_response.yummy_1;
+    top->offchip_processor_noc3_yummy = all_response.yummy_2;
+
+}
+
 
 void mpi_tick() {
     top->core_ref_clk = !top->core_ref_clk;
     main_time += 250;
     top->eval();
-    mpi_work_chipset();
+#ifdef MPI_OPT_0
+    //mpi_work_chipset();
+#endif
+#ifdef MPI_OPT_1
+    //mpi_work_opt_1_chipset();
+#endif
+#ifdef MPI_OPT_2
+    //mpi_work_opt_2_chipset();
+#endif
+#ifdef MPI_OPT_3
+    mpi_work_opt_3_chipset();
+#endif
+#ifdef MPI_OPT_4
+    //mpi_work_opt_4_chipset();
+#endif
     // Do MPI
     top->eval();
 #ifdef VERILATOR_VCD
@@ -248,44 +345,6 @@ void mpi_tick() {
     tfp->dump(main_time);
 #endif
 }
-
-void mpi_tick_opt() {
-    top->core_ref_clk = !top->core_ref_clk;
-    main_time += 250;
-    top->eval();
-    mpi_work_opt_chipset();
-    // Do MPI
-    top->eval();
-#ifdef VERILATOR_VCD
-    tfp->dump(main_time);
-#endif
-    top->core_ref_clk = !top->core_ref_clk;
-    main_time += 250;
-    top->eval();
-#ifdef VERILATOR_VCD
-    tfp->dump(main_time);
-#endif
-}
-
-void mpi_tick_opt_2() {
-    top->core_ref_clk = !top->core_ref_clk;
-    main_time += 250;
-    top->eval();
-    mpi_work_opt_2_chipset();
-    // Do MPI
-    top->eval();
-#ifdef VERILATOR_VCD
-    tfp->dump(main_time);
-#endif
-    top->core_ref_clk = !top->core_ref_clk;
-    main_time += 250;
-    top->eval();
-#ifdef VERILATOR_VCD
-    tfp->dump(main_time);
-#endif
-}
-
-
 
 void reset_and_init() {
     
@@ -418,7 +477,7 @@ int main(int argc, char **argv, char **env) {
     bool test_exit = false;
     int checkTestEnd=50000;
     while (!Verilated::gotFinish() and !test_exit) { 
-        mpi_tick_opt_2();
+        mpi_tick();
         if (checkTestEnd==0) {
             //std::cout << "Checking Finish CHIPSET" << std::endl;
             mpi_send_finish(test_end, rank);
