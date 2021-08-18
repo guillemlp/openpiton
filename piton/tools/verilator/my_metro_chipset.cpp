@@ -28,7 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "verilated.h"
 #include <iostream>
 //#define VERILATOR_VCD 0
-#define MPI_OPT_3 1
+#define MPI_OPT_4 1
 #ifdef VERILATOR_VCD
 #include "verilated_vcd_c.h"
 #endif
@@ -114,7 +114,7 @@ typedef struct {
 // MPI Send 3 NoC messages
 void mpi_send_all(mpi_all_t message, int dest, int rank, int flag);
 
-void mpi_receive_all(mpi_all_t* message, int origin, int flag);
+mpi_all_t mpi_receive_all(int origin, int flag);
 
 
 #ifdef VERILATOR_VCD
@@ -298,8 +298,7 @@ void mpi_work_opt_4_chipset() {
     mpi_send_all(message, dest, rank, ALL_NOC);
         
     // receive data
-    mpi_all_t all_response;
-    mpi_receive_all(&all_response, dest, ALL_NOC);
+    mpi_all_t all_response = mpi_receive_all(dest, ALL_NOC);
     
     top->processor_offchip_noc1_data  = all_response.data_0; 
     top->processor_offchip_noc1_valid = all_response.valid_0;
@@ -310,7 +309,6 @@ void mpi_work_opt_4_chipset() {
     top->offchip_processor_noc1_yummy = all_response.yummy_0;
     top->offchip_processor_noc2_yummy = all_response.yummy_1;
     top->offchip_processor_noc3_yummy = all_response.yummy_2;
-
 }
 
 
@@ -319,19 +317,19 @@ void mpi_tick() {
     main_time += 250;
     top->eval();
 #ifdef MPI_OPT_0
-    //mpi_work_chipset();
+    mpi_work_chipset();
 #endif
 #ifdef MPI_OPT_1
-    //mpi_work_opt_1_chipset();
+    mpi_work_opt_1_chipset();
 #endif
 #ifdef MPI_OPT_2
-    //mpi_work_opt_2_chipset();
+    mpi_work_opt_2_chipset();
 #endif
 #ifdef MPI_OPT_3
     mpi_work_opt_3_chipset();
 #endif
 #ifdef MPI_OPT_4
-    //mpi_work_opt_4_chipset();
+    mpi_work_opt_4_chipset();
 #endif
     // Do MPI
     top->eval();

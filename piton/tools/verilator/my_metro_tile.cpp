@@ -28,6 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "verilated.h"
 #include <iostream>
 //#define VERILATOR_VCD 0
+#define MPI_OPT_4 1
 #ifdef VERILATOR_VCD
 #include "verilated_vcd_c.h"
 #endif
@@ -116,7 +117,7 @@ typedef struct {
 // MPI Send 3 NoC messages
 void mpi_send_all(mpi_all_t message, int dest, int rank, int flag);
 
-void mpi_receive_all(mpi_all_t* message, int origin, int flag);
+mpi_all_t mpi_receive_all(int origin, int flag);
 
 #ifdef VERILATOR_VCD
 VerilatedVcdC* tfp;
@@ -566,8 +567,7 @@ void mpi_work_opt_4_N() {
     mpi_send_all(message, rankN, rank, ALL_NOC);
         
     // receive data
-    mpi_all_t all_response;
-    mpi_receive_all(&all_response, rankN, ALL_NOC);
+    mpi_all_t all_response = mpi_receive_all(rankN, ALL_NOC);
 
     top->in_N_noc1_data  = all_response.data_0; 
     top->in_N_noc1_valid = all_response.valid_0;
@@ -598,8 +598,7 @@ void mpi_work_opt_4_S() {
     mpi_send_all(message, rankS, rank, ALL_NOC);
         
     // receive data
-    mpi_all_t all_response;
-    mpi_receive_all(&all_response, rankS, ALL_NOC);
+    mpi_all_t all_response = mpi_receive_all(rankS, ALL_NOC);
     
     top->in_S_noc1_data  = all_response.data_0; 
     top->in_S_noc1_valid = all_response.valid_0;
@@ -614,6 +613,7 @@ void mpi_work_opt_4_S() {
 
 void mpi_work_opt_4_E() {
 
+    std::cout << "Before sending TILE" << std::endl;
     mpi_all_t message;
     message.data_0  = top->out_E_noc1_data;
     message.valid_0 = top->out_E_noc1_valid;
@@ -627,10 +627,10 @@ void mpi_work_opt_4_E() {
 
     // send data
     mpi_send_all(message, rankE, rank, ALL_NOC);
-        
+    
+    std::cout << "After sending TILE" << std::endl;
     // receive data
-    mpi_all_t all_response;
-    mpi_receive_all(&all_response, rankE, ALL_NOC);
+    mpi_all_t all_response = mpi_receive_all(rankE, ALL_NOC);
     
     top->in_E_noc1_data  = all_response.data_0; 
     top->in_E_noc1_valid = all_response.valid_0;
@@ -641,9 +641,11 @@ void mpi_work_opt_4_E() {
     top->in_E_noc1_yummy = all_response.yummy_0;
     top->in_E_noc2_yummy = all_response.yummy_1;
     top->in_E_noc3_yummy = all_response.yummy_2;
+    std::cout << "After receviing TILE" << std::endl;
 }
 
 void mpi_work_opt_4_W() {
+
 
     mpi_all_t message;
     message.data_0  = top->out_W_noc1_data;
@@ -660,8 +662,7 @@ void mpi_work_opt_4_W() {
     mpi_send_all(message, rankW, rank, ALL_NOC);
         
     // receive data
-    mpi_all_t all_response;
-    mpi_receive_all(&all_response, rankW, ALL_NOC);
+    mpi_all_t all_response = mpi_receive_all(rankW, ALL_NOC);
     
     top->in_W_noc1_data  = all_response.data_0; 
     top->in_W_noc1_valid = all_response.valid_0;
@@ -819,149 +820,49 @@ void mpi_tick() {
     top->core_ref_clk = !top->core_ref_clk;
     main_time += 250;
     top->eval();
-    
-    // Do MPI
+#ifdef MPI_OPT_0
+        // Do MPI
     if (rankN != -1) mpi_work_N();
     if (rankS != -1) mpi_work_S();
     if (rankE != -1) mpi_work_E();
     if (rankW != -1) mpi_work_W();
-    
-    top->eval();
-    if (rank==65) {
-    #ifdef VERILATOR_VCD
-        tfp->dump(main_time);
-    #endif
-    }
-    top->core_ref_clk = !top->core_ref_clk;
-    main_time += 250;
-    top->eval();
-    if (rank==65) {
-    #ifdef VERILATOR_VCD
-        tfp->dump(main_time);
-    #endif
-    }
-}
-void mpi_tick_opt() {
-    top->core_ref_clk = !top->core_ref_clk;
-    main_time += 250;
-    top->eval();
-    
-    // Do MPI
+#endif
+#ifdef MPI_OPT_1
     if (rankN != -1) mpi_work_opt_1_N();
     if (rankS != -1) mpi_work_opt_1_S();
     if (rankE != -1) mpi_work_opt_1_E();
     if (rankW != -1) mpi_work_opt_1_W();
-    
-    top->eval();
-    #ifdef VERILATOR_VCD
-        tfp->dump(main_time);
-    #endif
-
-    top->core_ref_clk = !top->core_ref_clk;
-    main_time += 250;
-    top->eval();
-    #ifdef VERILATOR_VCD
-        tfp->dump(main_time);
-    #endif
-}
-void mpi_tick_opt_2() {
-    top->core_ref_clk = !top->core_ref_clk;
-    main_time += 250;
-    top->eval();
-    
-    // Do MPI
+#endif
+#ifdef MPI_OPT_2
     if (rankN != -1) mpi_work_opt_2_N();
     if (rankS != -1) mpi_work_opt_2_S();
     if (rankE != -1) mpi_work_opt_2_E();
     if (rankW != -1) mpi_work_opt_2_W();
-    
-    top->eval();
-    #ifdef VERILATOR_VCD
-        tfp->dump(main_time);
-    #endif
-
-    top->core_ref_clk = !top->core_ref_clk;
-    main_time += 250;
-    top->eval();
-    #ifdef VERILATOR_VCD
-        tfp->dump(main_time);
-    #endif
-}
-void mpi_tick_opt_3() {
-    top->core_ref_clk = !top->core_ref_clk;
-    main_time += 250;
-    top->eval();
-    
-    // Do MPI
+#endif
+#ifdef MPI_OPT_3
     if (rankN != -1) mpi_work_opt_3_N();
     if (rankS != -1) mpi_work_opt_3_S();
     if (rankE != -1) mpi_work_opt_3_E();
     if (rankW != -1) mpi_work_opt_3_W();
-    
-    top->eval();
-    #ifdef VERILATOR_VCD
-        tfp->dump(main_time);
-    #endif
-
-    top->core_ref_clk = !top->core_ref_clk;
-    main_time += 250;
-    top->eval();
-    #ifdef VERILATOR_VCD
-        tfp->dump(main_time);
-    #endif
-}
-void mpi_tick_opt_4() {
-    top->core_ref_clk = !top->core_ref_clk;
-    main_time += 250;
-    top->eval();
-    
-    // Do MPI
-    if (rankN != -1) mpi_work_opt_4_N();
-    if (rankS != -1) mpi_work_opt_4_S();
+#endif
+#ifdef MPI_OPT_4
+    //if (rankN != -1) mpi_work_opt_4_N();
+    //if (rankS != -1) mpi_work_opt_4_S();
     if (rankE != -1) mpi_work_opt_4_E();
     if (rankW != -1) mpi_work_opt_4_W();
+#endif  
     
     top->eval();
-    #ifdef VERILATOR_VCD
-        tfp->dump(main_time);
-    #endif
-
+#ifdef VERILATOR_VCD
+    tfp->dump(main_time);
+#endif
     top->core_ref_clk = !top->core_ref_clk;
     main_time += 250;
     top->eval();
-    #ifdef VERILATOR_VCD
-        tfp->dump(main_time);
-    #endif
+#ifdef VERILATOR_VCD
+    tfp->dump(main_time);
+#endif
 }
-/*
-void mpi_tick_baseline() {
-    top->core_ref_clk = !top->core_ref_clk;
-    main_time += 250;
-    top->eval();
-    
-    // Do MPI
-    if (rankN != -1) mpi_work_baseline_N();
-    if (rankS != -1) mpi_work_baseline_S();
-    if (rankE != -1) mpi_work_baseline_E();
-    if (rankW != -1) mpi_work_baseline_W();
-    
-    top->eval();
-    if (rank=66) {
-    #ifdef VERILATOR_VCD
-        tfp->dump(main_time);
-    #endif
-    }
-    top->core_ref_clk = !top->core_ref_clk;
-    main_time += 250;
-    top->eval();
-    if (rank=66) {
-    #ifdef VERILATOR_VCD
-        tfp->dump(main_time);
-    #endif
-    }
-}*/
-
-
 
 void reset_and_init() {
     
@@ -1138,7 +1039,7 @@ int main(int argc, char **argv, char **env) {
     bool test_exit = false;
     int checkTestEnd=50000;
     while (!Verilated::gotFinish() and !test_exit) { 
-        mpi_tick_opt_3();
+        mpi_tick();
         if (checkTestEnd==0) {
             //std::cout << "Checking Finish TILE" << std::endl;
             test_exit= mpi_receive_finish();

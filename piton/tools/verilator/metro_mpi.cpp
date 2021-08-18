@@ -1,7 +1,7 @@
 #include <iostream>
 #include <mpi.h>
 
-#define MPI_OPT_3 1
+#define MPI_OPT_4 1
 
 using namespace std;
 
@@ -105,15 +105,15 @@ void initialize(){
 #endif
 #ifdef MPI_OPT_4
     // Initialize the struct data&valid
-    offsets_noc[0] = offsetof(mpi_all_t, data_0);
-    offsets_noc[1] = offsetof(mpi_all_t, data_1);
-    offsets_noc[2] = offsetof(mpi_all_t, data_2);
-    offsets_noc[3] = offsetof(mpi_all_t, valid_0);
-    offsets_noc[4] = offsetof(mpi_all_t, valid_1);
-    offsets_noc[5] = offsetof(mpi_all_t, valid_2);
-    offsets_noc[6] = offsetof(mpi_all_t, yummy_0);
-    offsets_noc[7] = offsetof(mpi_all_t, yummy_1);
-    offsets_noc[8] = offsetof(mpi_all_t, yummy_2);
+    offsets_all[0] = offsetof(mpi_all_t, data_0);
+    offsets_all[1] = offsetof(mpi_all_t, data_1);
+    offsets_all[2] = offsetof(mpi_all_t, data_2);
+    offsets_all[3] = offsetof(mpi_all_t, valid_0);
+    offsets_all[4] = offsetof(mpi_all_t, valid_1);
+    offsets_all[5] = offsetof(mpi_all_t, valid_2);
+    offsets_all[6] = offsetof(mpi_all_t, yummy_0);
+    offsets_all[7] = offsetof(mpi_all_t, yummy_1);
+    offsets_all[8] = offsetof(mpi_all_t, yummy_2);
 
     MPI_Type_create_struct(nitems_all, blocklengths_all, offsets_all, types_all, &mpi_all_type);
     MPI_Type_commit(&mpi_all_type);
@@ -239,14 +239,18 @@ void mpi_send_all(mpi_all_t message, int dest, int rank, int flag){
     MPI_Send(&message, message_len, mpi_all_type, dest, flag, MPI_COMM_WORLD);
 }
 
-void mpi_receive_all(mpi_all_t* message, int origin, int flag){
+mpi_all_t mpi_receive_all(int origin, int flag){
     int message_len = 1;
     MPI_Status status;
-    //mpi_noc_t message;
+    mpi_all_t message;
 
     MPI_Recv(&message, message_len, mpi_all_type, origin, flag, MPI_COMM_WORLD, &status);
         
-    //return message;
+    /*if ((*message).valid_0 or (*message).valid_1 or (*message).valid_1) {
+        std::cout <<  "yes" << std::endl;
+    }*/
+    
+    return message;
 }
 
 int getRank(){
