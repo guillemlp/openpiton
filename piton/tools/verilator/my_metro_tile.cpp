@@ -613,7 +613,6 @@ void mpi_work_opt_4_S() {
 
 void mpi_work_opt_4_E() {
 
-    std::cout << "Before sending TILE" << std::endl;
     mpi_all_t message;
     message.data_0  = top->out_E_noc1_data;
     message.valid_0 = top->out_E_noc1_valid;
@@ -627,8 +626,6 @@ void mpi_work_opt_4_E() {
 
     // send data
     mpi_send_all(message, rankE, rank, ALL_NOC);
-    
-    std::cout << "After sending TILE" << std::endl;
     // receive data
     mpi_all_t all_response = mpi_receive_all(rankE, ALL_NOC);
     
@@ -641,7 +638,6 @@ void mpi_work_opt_4_E() {
     top->in_E_noc1_yummy = all_response.yummy_0;
     top->in_E_noc2_yummy = all_response.yummy_1;
     top->in_E_noc3_yummy = all_response.yummy_2;
-    std::cout << "After receviing TILE" << std::endl;
 }
 
 void mpi_work_opt_4_W() {
