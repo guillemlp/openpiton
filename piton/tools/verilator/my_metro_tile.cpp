@@ -846,8 +846,8 @@ void mpi_tick() {
     if (rankW != -1) mpi_work_opt_3_W();
 #endif
 #ifdef MPI_OPT_4
-    //if (rankN != -1) mpi_work_opt_4_N();
-    //if (rankS != -1) mpi_work_opt_4_S();
+    if (rankN != -1) mpi_work_opt_4_N();
+    if (rankS != -1) mpi_work_opt_4_S();
     if (rankE != -1) mpi_work_opt_4_E();
     if (rankW != -1) mpi_work_opt_4_W();
 #endif  
