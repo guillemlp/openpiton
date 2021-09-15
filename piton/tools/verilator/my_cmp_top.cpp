@@ -157,6 +157,8 @@ Verilated::debug(1);
 
 reset_and_init();
 
+top->test_ena = 1;
+
 while (!Verilated::gotFinish()) { tick(); }
 
 #ifdef VERILATOR_VCD
