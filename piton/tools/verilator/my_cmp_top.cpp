@@ -30,6 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef VERILATOR_VCD
 #include "verilated_vcd_c.h"
 #endif
+#include <iomanip>
 
 uint64_t main_time = 0; // Current simulation time
 uint64_t clk = 0;
@@ -105,9 +106,9 @@ void reset_and_init() {
     std::cout << "Before second ticks" << std::endl << std::flush;
 //    // Wait for PLL lock
 //    wait( pll_lock == 1'b1 );
-    while (!top->pll_lock) {
+    /*while (!top->pll_lock) {
         tick();
-    }
+    }*/
 
     std::cout << "Before third ticks" << std::endl << std::flush;
 //    // After 10 cycles turn on chip-level clock enable
@@ -160,6 +161,8 @@ reset_and_init();
 top->test_ena = 1;
 
 while (!Verilated::gotFinish()) { tick(); }
+
+std::cout << std::setprecision(10) << sc_time_stamp() << std::endl;
 
 #ifdef VERILATOR_VCD
 std::cout << "Trace done" << std::endl;
