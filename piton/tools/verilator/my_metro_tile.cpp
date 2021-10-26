@@ -931,9 +931,9 @@ void reset_and_init() {
 
     //init_jbus_model_call((char *) "mem.image", 0);
 
-    std::cout << "Before first ticks" << std::endl << std::flush;
+    //std::cout << "Before first ticks" << std::endl << std::flush;
     tick();
-    std::cout << "After very first tick" << std::endl << std::flush;
+    //std::cout << "After very first tick" << std::endl << std::flush;
 //    // Reset PLL for 100 cycles
 //    repeat(100)@(posedge core_ref_clk);
 //    pll_rst_n = 1'b1;
@@ -942,14 +942,14 @@ void reset_and_init() {
     }
     top->pll_rst_n = 1;
 
-    std::cout << "Before second ticks" << std::endl << std::flush;
+    //std::cout << "Before second ticks" << std::endl << std::flush;
     //    // Wait for PLL lock
     //    wait( pll_lock == 1'b1 );
     //    while (!top->pll_lock) {
     //        tick();
     //    }
 
-    std::cout << "Before third ticks" << std::endl << std::flush;
+    //std::cout << "Before third ticks" << std::endl << std::flush;
 //    // After 10 cycles turn on chip-level clock enable
 //    repeat(10)@(posedge `CHIP_INT_CLK);
 //    clk_en = 1'b1;
@@ -977,17 +977,15 @@ void reset_and_init() {
 
     //top->ciop_fake_iob.ok_iob = 1;
     top->ok_iob = 1;
-    std::cout << "Reset complete" << std::endl << std::flush;
+    //std::cout << "Reset complete" << std::endl << std::flush;
 }
 
 int main(int argc, char **argv, char **env) {
-    std::cout << "Started" << std::endl << std::flush;
+    //std::cout << "Started" << std::endl << std::flush;
     Verilated::commandArgs(argc, argv);
-    //if (argc != 2) {
-    //    std::cerr << "Usage ./VMetro_tile num_tiles_x num_tiles_y"
-    //}
+
     top = new Vmetro_tile;
-    std::cout << "Vmetro_tile created" << std::endl << std::flush;
+    //std::cout << "Vmetro_tile created" << std::endl << std::flush;
 
     // MPI work 
     initialize();
@@ -1003,14 +1001,13 @@ int main(int argc, char **argv, char **env) {
     tfp->open(cstr);
     Verilated::debug(1);
 #endif
-
     
-    std::cout << "TILE size: " << size << ", rank: " << rank <<  std::endl;
     if (rank==0) {
         dest = 1;
     } else {
         dest = 0;
     }
+    
     tile_x = getDimX();
     tile_y = getDimY();
     rankN  = getRankN();
@@ -1018,12 +1015,15 @@ int main(int argc, char **argv, char **env) {
     rankW  = getRankW();
     rankE  = getRankE();
 
+    #ifdef VERILATOR_VCD
+    std::cout << "TILE size: " << size << ", rank: " << rank <<  std::endl;
     std::cout << "tile_y: " << tile_y << std::endl;
     std::cout << "tile_x: " << tile_x << std::endl;
     std::cout << "rankN: " << rankN << std::endl;
     std::cout << "rankS: " << rankS << std::endl;
     std::cout << "rankW: " << rankW << std::endl;
     std::cout << "rankE: " << rankE << std::endl;
+    #endif
 
     top->default_chipid = 0;
     top->default_coreid_x = tile_x;
@@ -1046,7 +1046,7 @@ int main(int argc, char **argv, char **env) {
             checkTestEnd--;
         }
     }
-    std::cout << std::setprecision(10) << sc_time_stamp() << std::endl;
+    std::cout << "ticks: " << std::setprecision(10) << sc_time_stamp() << " , cycles: " << sc_time_stamp()/500 << std::endl;
 
     #ifdef VERILATOR_VCD
     std::cout << "Trace done" << std::endl;
@@ -1054,6 +1054,7 @@ int main(int argc, char **argv, char **env) {
     #endif
 
     finalize();
+    top->final();
 
     delete top;
     exit(0);

@@ -71,7 +71,7 @@ typedef struct {
 
 void initialize(){
     MPI_Init(NULL, NULL);
-    cout << "initializing" << endl;
+    //cout << "initializing" << endl;
     
 #if defined(MPI_OPT_0)
     // Initialize the struct data&valid
@@ -266,7 +266,7 @@ int getSize(){
 }
 
 void finalize(){
-    cout << "[DPI CPP] Finalizing" << endl;
+    //cout << "[DPI CPP] Finalizing" << endl;
     MPI_Finalize();
 }
 

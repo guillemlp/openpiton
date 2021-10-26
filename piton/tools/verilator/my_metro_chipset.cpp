@@ -389,9 +389,9 @@ void reset_and_init() {
 
     init_jbus_model_call((char *) "mem.image", 0);
 
-    std::cout << "Before first ticks" << std::endl << std::flush;
+    //std::cout << "Before first ticks" << std::endl << std::flush;
     tick();
-    std::cout << "After very first tick" << std::endl << std::flush;
+    //std::cout << "After very first tick" << std::endl << std::flush;
 //    // Reset PLL for 100 cycles
 //    repeat(100)@(posedge core_ref_clk);
 //    pll_rst_n = 1'b1;
@@ -400,14 +400,14 @@ void reset_and_init() {
     }
     top->pll_rst_n = 1;
 
-    std::cout << "Before second ticks" << std::endl << std::flush;
+    //std::cout << "Before second ticks" << std::endl << std::flush;
 //    // Wait for PLL lock
 //    wait( pll_lock == 1'b1 );
     //while (!top->pll_lock) {
     //    tick();
     //}
 
-    std::cout << "Before third ticks" << std::endl << std::flush;
+    //std::cout << "Before third ticks" << std::endl << std::flush;
 //    // After 10 cycles turn on chip-level clock enable
 //    repeat(10)@(posedge `CHIP_INT_CLK);
 //    clk_en = 1'b1;
@@ -435,14 +435,14 @@ void reset_and_init() {
 
     //top->ciop_fake_iob.ok_iob = 1;
     top->ok_iob = 1;
-    std::cout << "Reset complete" << std::endl << std::flush;
+    std::cout << "Reset complete (Chipset)" << std::endl << std::flush;
 }
 
 int main(int argc, char **argv, char **env) {
-    std::cout << "Started" << std::endl << std::flush;
+    //std::cout << "Started" << std::endl << std::flush;
     Verilated::commandArgs(argc, argv);
     top = new Vmetro_chipset;
-    std::cout << "Vmetro_chipset created" << std::endl << std::flush;
+    //std::cout << "Vmetro_chipset created" << std::endl << std::flush;
 
 #ifdef VERILATOR_VCD
     Verilated::traceEverOn(true);
@@ -457,7 +457,8 @@ int main(int argc, char **argv, char **env) {
     initialize();
     rank = getRank();
     size = getSize();
-    std::cout << "CHIPSET size: " << size << ", rank: " << rank <<  std::endl;
+    
+    //std::cout << "CHIPSET size: " << size << ", rank: " << rank <<  std::endl;
     if (rank==0) {
         dest = 1;
     } else {
@@ -469,9 +470,6 @@ int main(int argc, char **argv, char **env) {
 
     top->test_ena = 1;
 
-    /*for (int i = 0; i < 350000; i++) {
-        mpi_tick();
-    }*/
     bool test_exit = false;
     int checkTestEnd=50000;
     while (!Verilated::gotFinish() and !test_exit) { 
@@ -488,7 +486,7 @@ int main(int argc, char **argv, char **env) {
         }
     }
 
-    std::cout << std::setprecision(10) << sc_time_stamp() << std::endl;
+    std::cout << "ticks: " << std::setprecision(10) << sc_time_stamp() << " , cycles: " << sc_time_stamp()/500 << std::endl;
 
     #ifdef VERILATOR_VCD
     std::cout << "Trace done" << std::endl;
