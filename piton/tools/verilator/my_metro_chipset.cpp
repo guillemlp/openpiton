@@ -471,13 +471,13 @@ int main(int argc, char **argv, char **env) {
     top->test_ena = 1;
 
     bool test_exit = false;
-    int checkTestEnd=50000;
+    uint64_t checkTestEnd=1000000;
     while (!Verilated::gotFinish() and !test_exit) { 
         mpi_tick();
         if (checkTestEnd==0) {
             //std::cout << "Checking Finish CHIPSET" << std::endl;
             mpi_send_finish(test_end, rank);
-            checkTestEnd=10000;
+            checkTestEnd=100000;
             test_exit=test_end;
             //std::cout << "Finishing: " << test_end << std::endl;
         }

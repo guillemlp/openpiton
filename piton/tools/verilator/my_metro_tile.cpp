@@ -1033,13 +1033,13 @@ int main(int argc, char **argv, char **env) {
     reset_and_init();
 
     bool test_exit = false;
-    int checkTestEnd=50000;
+    uint64_t checkTestEnd=1000000;
     while (!Verilated::gotFinish() and !test_exit) { 
         mpi_tick();
         if (checkTestEnd==0) {
             //std::cout << "Checking Finish TILE" << std::endl;
             test_exit= mpi_receive_finish();
-            checkTestEnd=10000;
+            checkTestEnd=100000;
             //std::cout << "Finishing: " << test_exit << std::endl;
         }
         else {
