@@ -1,0 +1,93 @@
+diff --git a/src/ariane.sv b/src/ariane.sv
+index e306c3b..e118694 100644
+--- a/src/ariane.sv
++++ b/src/ariane.sv
+@@ -777,19 +777,35 @@ module ariane #(
+ 
+ // mock tracer for Verilator, to be used with spike-dasm
+ `else
+-
++`ifdef COMMIT_INSTRUCTIONS
+   int f;
++  string fn;
+   logic [63:0] cycles;
+-
+-  initial begin
+-    f = $fopen("trace_hart_00.dasm", "w");
+-  end
+-
++  logic open;
++  logic [63:0] instr_c;
++  string mode = "";
++
++  //initial begin
++    //string fn;
++    //$sformat(fn, "trace_hart_%0.0f.log", hart_id_i);
++    //$display("[TRACER] Output filename is: %s", fn);
++    //f = $fopen(fn,"w");
++  //end
++    
+   always_ff @(posedge clk_i or negedge rst_ni) begin
+     if (~rst_ni) begin
+       cycles <= 0;
++      open <= 1'b0;
++      instr_c <= 0; 
+     end else begin
+-      string mode = "";
++      // we create the file after reset to not do 1000 opens
++      if (!open) begin
++        open <= 1'b1;
++        $sformat(fn, "trace_hart_%0.0f.log", hart_id_i);
++        $display("[TRACER] Output filename is: %s", fn);
++        f = $fopen(fn,"w");
++      end
++      
+       if (debug_mode) mode = "D";
+       else begin
+         case (priv_lvl)
+@@ -801,6 +817,7 @@ module ariane #(
+       for (int i = 0; i < NR_COMMIT_PORTS; i++) begin
+         if (commit_ack[i] && !commit_instr_id_commit[i].ex.valid) begin
+           $fwrite(f, "%d 0x%0h %s (0x%h) DASM(%h)\n", cycles, commit_instr_id_commit[i].pc, mode, commit_instr_id_commit[i].ex.tval[31:0], commit_instr_id_commit[i].ex.tval[31:0]);
++          instr_c <= instr_c + 1;
+         end else if (commit_ack[i] && commit_instr_id_commit[i].ex.valid) begin
+           if (commit_instr_id_commit[i].ex.cause == 2) begin
+             $fwrite(f, "Exception Cause: Illegal Instructions, DASM(%h) PC=%h\n", commit_instr_id_commit[i].ex.tval[31:0], commit_instr_id_commit[i].pc);
+@@ -820,6 +837,31 @@ module ariane #(
+   final begin
+     $fclose(f);
+   end
++
++`else
++  logic [63:0] cycles;
++  logic [63:0] instr_c;
++    
++  always_ff @(posedge clk_i or negedge rst_ni) begin
++    if (~rst_ni) begin
++      cycles <= 0;
++      instr_c <= 0;
++    end else begin
++      
++      for (int i = 0; i < NR_COMMIT_PORTS; i++) begin
++        if (commit_ack[i] && !commit_instr_id_commit[i].ex.valid) begin
++          instr_c <= instr_c + 1;
++        end
++      end
++      cycles <= cycles + 1;
++    end
++  end
++
++  final begin
++    $display("hart_id: %d, instr: %d , cycles: %d", hart_id_i, instr_c, cycles);
++  end
++`endif // COMMIT_INSTRUCTIONS
++
+ `endif // VERILATOR
+ //pragma translate_on
+ 
+diff --git a/src/rv_plic b/src/rv_plic
+--- a/src/rv_plic
++++ b/src/rv_plic
+@@ -1 +1 @@
+-Subproject commit ebe3e9888920f1f757b75bab81dc80f804896f57
++Subproject commit ebe3e9888920f1f757b75bab81dc80f804896f57-dirty
