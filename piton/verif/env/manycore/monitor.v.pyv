@@ -19,6 +19,7 @@
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 //
 // ========== Copyright Header End ============================================
+`ifndef DISABLE_ALL_MONITORS
 `include "cross_module.tmp.h"
 `include "iop.h"
 `include "ifu.tmp.h"
@@ -1221,10 +1222,10 @@ module monitor(/*AUTOARG*/
    tso_mon tso_mon0( .clk       (clk), .rst_l   (rst_l));
 `endif
 
-`ifdef PITON_SPARC
+`ifdef PITON_OST1
    lsu_mon lsu_mon0( .clk       (clk), .rst_l   (rst_l));
    lsu_mon2 lsu_mon2( .clk       (clk), .rst_l   (rst_l));
-`endif // ifdef PITON_SPARC
+`endif // ifdef PITON_OST1
 `ifndef VERILATOR
    multicycle_mon multicycle_mon(.clk       (clk), .rst_l   (rst_l));
 `endif
@@ -1325,6 +1326,7 @@ endmodule
 // verilog-library-extensions:(".v" ".h")
 // End:
 
+`endif //DISABLE_ALL_MONITORS
 
 
 

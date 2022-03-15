@@ -33,6 +33,8 @@ int main(int argc, int** argv) {
   id = argv[0][0];
   core_num = argv[0][1];
 
+  printf("%d %d\n", id, core_num);
+
   // two cores try to edit the same variable
   for (i=0;i<5;i++)
       if (id == 0)

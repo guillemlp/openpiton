@@ -1861,10 +1861,11 @@ if ($opt{riv_run}) {
     if ($opt{vlt_run}) {
 
       if ($opt{sys} eq "metro_chipset") {
-        $cmd .= "mpirun -np 1 -map-by core --oversubscribe --output-filename filename $model_path/obj_dir/Vmetro_chipset " ;
+        #### --oversubscribe --output-filename filename
+        $cmd .= "mpirun -np 1 --oversubscribe $model_path/obj_dir/Vmetro_chipset " ;
         $cmd .= " " ;
         $cmd .= join (" ", @{$opt{sim_run_args}}) ;
-        $cmd .= " : -np $ENV{PITON_NUM_TILES} --oversubscribe --output-filename filename $model_path/../../metro_tile/rel-0.1/obj_dir/Vmetro_tile ";
+        $cmd .= " : -np $ENV{PITON_NUM_TILES} --oversubscribe $model_path/../../metro_tile/rel-0.1/obj_dir/Vmetro_tile ";
         #$cmd .= " " ;
         #$cmd .= join (" ", @{$opt{sim_run_args}}) ;
       }
