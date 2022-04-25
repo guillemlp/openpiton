@@ -2,7 +2,7 @@
 #include <mpi.h>
 
 #define MPI_OPT_4 1
-
+#define MPI_OPT_MULTI 1
 using namespace std;
 
 unsigned long long message_async;
@@ -36,6 +36,14 @@ MPI_Datatype types_all[9] = {MPI_UNSIGNED_LONG_LONG, MPI_UNSIGNED_LONG_LONG, MPI
 MPI_Datatype mpi_all_type;
 MPI_Aint     offsets_all[9];
 
+const int nitems_multi_all=10;
+int          blocklengths_multi_all[10] = {1,1,1,1,1,1,1,1,1,1};
+MPI_Datatype types_multi_all[10] = {MPI_UNSIGNED_LONG_LONG, MPI_UNSIGNED_LONG_LONG, MPI_UNSIGNED_LONG_LONG,
+                         MPI_UNSIGNED_SHORT, MPI_UNSIGNED_SHORT, MPI_UNSIGNED_SHORT,
+                         MPI_UNSIGNED_SHORT, MPI_UNSIGNED_SHORT, MPI_UNSIGNED_SHORT,MPI_UNSIGNED_SHORT};
+MPI_Datatype mpi_multi_all_type;
+MPI_Aint     offsets_multi_all[10];
+
 
 typedef struct {
     unsigned short valid;
@@ -67,7 +75,22 @@ typedef struct {
     unsigned short yummy_0;
     unsigned short yummy_1;
     unsigned short yummy_2;
+    
 } mpi_all_t;
+
+
+typedef struct {
+    unsigned long long data_0;
+    unsigned long long data_1;
+    unsigned long long data_2;
+    unsigned short valid_0;
+    unsigned short valid_1;
+    unsigned short valid_2;
+    unsigned short yummy_0;
+    unsigned short yummy_1;
+    unsigned short yummy_2;
+    unsigned short dest_id;    
+} mpi_multi_all_t;
 
 void initialize(){
     MPI_Init(NULL, NULL);
@@ -118,6 +141,22 @@ void initialize(){
     MPI_Type_create_struct(nitems_all, blocklengths_all, offsets_all, types_all, &mpi_all_type);
     MPI_Type_commit(&mpi_all_type);
 #endif
+#ifdef MPI_OPT_MULTI
+    // Initialize the struct data&valid
+    offsets_multi_all[0] = offsetof(mpi_multi_all_t, data_0);
+    offsets_multi_all[1] = offsetof(mpi_multi_all_t, data_1);
+    offsets_multi_all[2] = offsetof(mpi_multi_all_t, data_2);
+    offsets_multi_all[3] = offsetof(mpi_multi_all_t, valid_0);
+    offsets_multi_all[4] = offsetof(mpi_multi_all_t, valid_1);
+    offsets_multi_all[5] = offsetof(mpi_multi_all_t, valid_2);
+    offsets_multi_all[6] = offsetof(mpi_multi_all_t, yummy_0);
+    offsets_multi_all[7] = offsetof(mpi_multi_all_t, yummy_1);
+    offsets_multi_all[8] = offsetof(mpi_multi_all_t, yummy_2);
+    offsets_multi_all[9] = offsetof(mpi_multi_all_t, dest_id);
+
+    MPI_Type_create_struct(nitems_multi_all, blocklengths_multi_all, offsets_multi_all, types_multi_all, &mpi_multi_all_type);
+    MPI_Type_commit(&mpi_multi_all_type);
+#endif
 }
 
 // MPI finish functions
@@ -138,49 +177,6 @@ void mpi_send_finish(unsigned short message, int rank){
         cout << "[DPI CPP] Sending finish " << std::hex << (int)message << " to All" << endl << std::flush;
     }*/
     MPI_Bcast(&message, message_len, MPI_UNSIGNED_SHORT, rank, MPI_COMM_WORLD);
-}
-
-// MPI Yummy functions
-unsigned short mpi_receive_yummy(int origin, int flag){
-    unsigned short message;
-    int message_len = 1;
-    MPI_Status status;
-    //cout << "[DPI CPP] Block Receive YUMMY from rank: " << origin << endl << std::flush;
-    MPI_Recv(&message, message_len, MPI_UNSIGNED_SHORT, origin, flag, MPI_COMM_WORLD, &status);
-    /*if (short(message)) {
-        cout << "[DPI CPP] Yummy received: " << std::hex << (short)message << endl << std::flush;
-    }*/
-    return message;
-}
-
-void mpi_send_yummy(unsigned short message, int dest, int rank, int flag){
-    int message_len = 1;
-    /*if (message) {
-        cout << "[DPI CPP] Sending YUMMY " << std::hex << (int)message << " to " << dest << endl << std::flush;
-    }*/
-    MPI_Send(&message, message_len, MPI_UNSIGNED_SHORT, dest, flag, MPI_COMM_WORLD);
-}
-
-// MPI data&Valid functions
-void mpi_send_data(unsigned long long data, unsigned char valid, int dest, int rank, int flag){
-    int message_len = 1;
-    mpi_data_t message;
-
-    message.valid = valid;
-    message.data  = data;
-    
-    MPI_Send(&message, message_len, mpi_data_type, dest, flag, MPI_COMM_WORLD);
-}
-
-unsigned long long mpi_receive_data(int origin, unsigned short* valid, int flag){
-    int message_len = 1;
-    MPI_Status status;
-    mpi_data_t message;
-
-    MPI_Recv(&message, message_len, mpi_data_type, origin, flag, MPI_COMM_WORLD, &status);
-    
-    *valid = message.valid;
-    return message.data;
 }
 
 // MPI Send 3 NoC messages
@@ -235,7 +231,8 @@ mpi_yummy_t mpi_receive_all_yummy(int origin, int flag){
 // MPI Send 3 NoC messages
 void mpi_send_all(mpi_all_t message, int dest, int rank, int flag){
     int message_len = 1;
-
+    MPI_Request request;
+    //MPI_Isend(&message, message_len, mpi_all_type, dest, flag, MPI_COMM_WORLD, &request);
     MPI_Send(&message, message_len, mpi_all_type, dest, flag, MPI_COMM_WORLD);
 }
 
@@ -245,6 +242,27 @@ mpi_all_t mpi_receive_all(int origin, int flag){
     mpi_all_t message;
 
     MPI_Recv(&message, message_len, mpi_all_type, origin, flag, MPI_COMM_WORLD, &status);
+        
+    /*if ((*message).valid_0 or (*message).valid_1 or (*message).valid_1) {
+        std::cout <<  "yes" << std::endl;
+    }*/
+    
+    return message;
+}
+
+// MPI Send MULTI-TILE all messages
+void mpi_send_multi_all(mpi_multi_all_t message, int dest, int rank, int flag){
+    int message_len = 1;
+
+    MPI_Send(&message, message_len, mpi_multi_all_type, dest, flag, MPI_COMM_WORLD);
+}
+// MPI Send MULTI-TILE all messages
+mpi_multi_all_t mpi_receive_multi_all(int origin, int flag){
+    int message_len = 1;
+    MPI_Status status;
+    mpi_multi_all_t message;
+
+    MPI_Recv(&message, message_len, mpi_multi_all_type, origin, flag, MPI_COMM_WORLD, &status);
         
     /*if ((*message).valid_0 or (*message).valid_1 or (*message).valid_1) {
         std::cout <<  "yes" << std::endl;
